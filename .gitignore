@@ -1,0 +1,6 @@
+﻿*.json
+*.db
+*.bat
+*.pyc
+*.zip
+__pycache__/

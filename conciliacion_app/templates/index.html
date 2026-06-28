@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Conciliación — Rimac</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Segoe UI,sans-serif;background:#f4f6f8;color:#1a1a1a;font-size:14px}
+
+/* ── Topbar ── */
+.topbar{background:#0F6E56;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-title{color:#E1F5EE;font-size:15px;font-weight:600}
+.topbar-info{color:#9FE1CB;font-size:12px;display:flex;gap:14px;align-items:center}
+.topbar-info span{cursor:pointer;text-decoration:underline}
+
+/* ── Nav ── */
+.nav{background:#fff;border-bottom:1px solid #e0e0e0;display:flex;padding:0 20px;overflow-x:auto}
+.tab{padding:11px 16px;font-size:13px;color:#666;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#0F6E56}
+.tab.active{color:#0F6E56;border-bottom-color:#0F6E56;font-weight:600}
+
+/* ── Layout ── */
+.content{padding:20px;max-width:1300px;margin:0 auto}
+.hidden{display:none}
+.card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:16px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.divider{border:none;border-top:1px solid #eee;margin:14px 0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* ── KPI Cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi-card{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px}
+.kpi-card.principal{border:2px solid #0F6E56;background:#f0fbf7}
+.kpi-card.danger{border:2px solid #E24B4A;background:#fff8f8}
+.kpi-label{font-size:11px;color:#888;font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.kpi-val{font-size:26px;font-weight:700;color:#1a1a1a;line-height:1}
+.kpi-val.green{color:#0F6E56}
+.kpi-val.amber{color:#854F0B}
+.kpi-val.red{color:#E24B4A}
+.kpi-val.blue{color:#1E40AF}
+.kpi-sub{font-size:12px;color:#666;margin-top:4px}
+
+/* ── Tablero de avance (Karen) ── */
+.tablero{background:linear-gradient(135deg,#0F6E56 0%,#085041 100%);border-radius:12px;padding:20px;margin-bottom:14px;color:#E1F5EE}
+.tablero-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px;color:#9FE1CB}
+.tablero-kpis{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.tablero-kpi{background:rgba(255,255,255,.1);border-radius:8px;padding:12px}
+.tablero-kpi-label{font-size:10px;color:#9FE1CB;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.tablero-kpi-val{font-size:22px;font-weight:700;color:#fff}
+.tablero-kpi-sub{font-size:11px;color:#9FE1CB;margin-top:2px}
+
+/* Barra de progreso tablero */
+.prog-wrap{margin-bottom:10px}
+.prog-label{display:flex;justify-content:space-between;font-size:12px;color:#9FE1CB;margin-bottom:6px}
+.prog-track{background:rgba(255,255,255,.2);border-radius:999px;height:18px;position:relative;overflow:hidden}
+.prog-fill{height:18px;border-radius:999px;transition:width .8s ease;position:relative}
+.prog-fill.casos{background:linear-gradient(90deg,#5DCAA5,#9FE1CB)}
+.prog-fill.monto{background:linear-gradient(90deg,#F59E0B,#FCD34D)}
+.prog-fill.semanal{background:linear-gradient(90deg,#60A5FA,#93C5FD)}
+.prog-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:#085041}
+
+/* Badge estado meta */
+.meta-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700}
+.meta-badge.ruta{background:#EAF3DE;color:#27500A}
+.meta-badge.riesgo{background:#FCEBEB;color:#501313}
+
+/* ── Formulario búsqueda ── */
+.search-row{display:flex;gap:8px}
+.search-row input{flex:1;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px}
+.search-row input:focus{outline:none;border-color:#0F6E56;box-shadow:0 0 0 2px rgba(15,110,86,.1)}
+
+/* ── Botones ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #ccc;background:#fff;color:#333;transition:all .15s}
+.btn:hover{background:#f0f0f0}
+.btn-primary{background:#0F6E56;border-color:#0F6E56;color:#fff}
+.btn-primary:hover{background:#0a5a47}
+.btn-danger{background:#E24B4A;border-color:#E24B4A;color:#fff}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* ── Campos ── */
+.fields-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fields-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:#888;font-weight:500}
+.field-val{background:#f7f7f7;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px;font-size:13px;min-height:34px}
+.field-edit{background:#fff;border:1px solid #aaa;border-radius:6px;padding:7px 10px;font-size:13px;width:100%}
+.field-edit:focus{outline:none;border-color:#0F6E56}
+.field-edit.highlight{border-color:#1D9E75;background:#f0fbf7}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600}
+.b-ok{background:#EAF3DE;color:#27500A}
+.b-warn{background:#FAEEDA;color:#633806}
+.b-err{background:#FCEBEB;color:#501313}
+.b-info{background:#EEEDFE;color:#3C3489}
+.b-gray{background:#f0f0f0;color:#555}
+
+/* ── Combos ── */
+.combo-wrap{position:relative}
+.combo-input{width:100%;padding:7px 10px;border:1px solid #1D9E75;border-radius:6px;font-size:13px;background:#f0fbf7}
+.combo-input:focus{outline:none;border-color:#0F6E56}
+.combo-drop{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;max-height:200px;overflow-y:auto;z-index:999;display:none;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.combo-drop.open{display:block}
+.combo-opt{padding:7px 10px;font-size:13px;cursor:pointer}
+.combo-opt:hover{background:#f0fbf7;color:#0F6E56;font-weight:500}
+
+/* ── Importar ── */
+.import-zone{border:2px dashed #ccc;border-radius:10px;padding:28px;text-align:center;color:#888;cursor:pointer}
+.import-zone:hover{border-color:#0F6E56;color:#0F6E56}
+.plantilla-box{background:#E1F5EE;border:1px solid #5DCAA5;border-radius:10px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+/* ── Tablas ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:8px 10px;background:#f7f7f7;font-size:11px;font-weight:600;color:#555;text-transform:uppercase;border-bottom:2px solid #e0e0e0}
+.data-table td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:#fafafa}
+
+/* ── Log table ── */
+.log-wrap{overflow-x:auto}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px}
+.log-table th{padding:8px 10px;background:#f7f7f7;font-size:10px;font-weight:600;color:#555;text-transform:uppercase;border-bottom:2px solid #e0e0e0;text-align:left;white-space:nowrap}
+.log-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0;white-space:nowrap}
+.log-table tr:hover td{background:#fafafa}
+.log-table tr.ganador td{background:#f0fbf7}
+
+/* ── Barra mini ── */
+.bar-row{display:flex;align-items:center;gap:6px}
+.bar-track{flex:1;background:#f0f0f0;border-radius:4px;height:8px}
+.bar-fill{height:8px;border-radius:4px;background:#0F6E56}
+
+/* ── Banner sync ── */
+#banner-sync{display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 16px;margin-bottom:14px;align-items:center;justify-content:space-between;gap:12px}
+#banner-sync.visible{display:flex}
+
+/* ── Filtros ── */
+.filtros-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.filtro-input{padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+.filtro-input:focus{outline:none;border-color:#0F6E56}
+
+/* ── Historial panel ── */
+.hist-panel{background:#fff;border:1px solid #0F6E56;border-radius:10px;padding:16px;margin-top:14px}
+.hist-title{font-size:13px;font-weight:600;color:#0F6E56;margin-bottom:10px}
+.hist-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+.hist-row:last-child{border-bottom:none}
+.hist-ts{color:#888;min-width:140px}
+.hist-campo{color:#555;min-width:160px;font-weight:500}
+.hist-arrow{color:#0F6E56;font-weight:700}
+
+/* ── Movimiento / Delta ── */
+.mov-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.mov-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.mov-kpi{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px}
+.mov-kpi-label{font-size:11px;color:#888;font-weight:500;margin-bottom:4px;text-transform:uppercase}
+.mov-kpi-val{font-size:22px;font-weight:700}
+.mov-table{width:100%;border-collapse:collapse;font-size:12px}
+.mov-table th{padding:8px 10px;background:#f7f7f7;font-size:10px;font-weight:600;color:#555;text-transform:uppercase;border-bottom:2px solid #e0e0e0;text-align:left;white-space:nowrap}
+.mov-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.mov-table tr:last-child td{border-bottom:none}
+.mov-table tr:hover td{background:#fafafa}
+.mov-table tr.mov-up td{background:#f0fbf7}
+.mov-table tr.mov-down td{background:#fff8f8}
+.delta-pos{color:#0F6E56;font-weight:700}
+.delta-neg{color:#E24B4A;font-weight:700}
+.delta-zero{color:#888}
+.snap-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.snap-ok{background:#EAF3DE;color:#27500A}
+.snap-no{background:#FAEEDA;color:#633806}
+.filtros-mov{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;z-index:9999;pointer-events:none;max-width:400px}
+#toast.show{opacity:1}
+#toast.ok{background:#0F6E56}
+#toast.err{background:#E24B4A}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-title">🗄️ Sistema Conciliación — Rimac</div>
+  <div class="topbar-info">
+    <span id="info-archivo">Cargando...</span>
+    <span id="info-filas"></span>
+    <span onclick="recargarBase()">🔄 Recargar base</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="tab active"  onclick="switchTab('registro')">📋 Registro</div>
+  <div class="tab"         onclick="switchTab('importar')">📥 Importar</div>
+  <div class="tab"         onclick="switchTab('logop')">📊 Log Operacional</div>
+  <div class="tab"         onclick="switchTab('dashboard')">📈 Dashboard</div>
+  <div class="tab"         onclick="switchTab('movimiento')">🔀 Movimiento</div>
+</div>
+
+<div class="content">
+
+  <!-- Banner desincronización -->
+  <div id="banner-sync">
+    <div>
+      <strong>⚠️ El Excel fue modificado externamente</strong>
+      <div style="font-size:11px;color:#78350F;margin-top:2px" id="banner-det"></div>
+    </div>
+    <button class="btn btn-primary" onclick="recargarBase()">🔄 Recargar ahora</button>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 1 — REGISTRO INDIVIDUAL
+  ════════════════════════════════════ -->
+  <div id="tab-registro">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total registros</div><div class="kpi-val" id="m-total">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Última carga</div><div class="kpi-val" style="font-size:13px;margin-top:6px" id="m-carga">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Archivo activo</div><div class="kpi-val" style="font-size:11px;margin-top:6px;color:#555;word-break:break-all" id="m-archivo">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Guardados hoy</div><div class="kpi-val green" id="m-guardados">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Buscar registro por ID</div>
+      <div class="search-row">
+        <input type="text" id="input-id" placeholder="Ingresa el ID del registro..."
+               onkeydown="if(event.key==='Enter')buscarRegistro()"/>
+        <button class="btn btn-primary" onclick="buscarRegistro()">🔍 Buscar</button>
+        <button class="btn" onclick="limpiarFormulario()">✖ Limpiar</button>
+      </div>
+    </div>
+
+    <div id="panel-registro" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="badge b-info" id="badge-base">—</span>
+            <span class="badge b-warn" id="badge-estado">—</span>
+            <span style="font-size:11px;color:#888">ID: <strong id="header-id">—</strong></span>
+          </div>
+          <button class="btn" onclick="verHistorial()" style="font-size:12px">
+            🕐 Ver historial del ID
+          </button>
+        </div>
+
+        <div class="card-title">Datos del registro (solo lectura)</div>
+        <div class="fields-grid" id="campos-readonly" style="margin-bottom:14px"></div>
+
+        <div class="divider"></div>
+        <div class="card-title">Campos editables ⭐ = mueven la aguja</div>
+        <div id="campos-editables"></div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="limpiarFormulario()">✖ Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarCambios()">💾 Guardar cambios</button>
+        </div>
+      </div>
+
+      <!-- Panel historial del ID -->
+      <div id="panel-historial" class="hidden hist-panel">
+        <div class="hist-title" id="hist-titulo">Historial del ID</div>
+        <div id="hist-contenido"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 2 — IMPORTAR
+  ════════════════════════════════════ -->
+  <div id="tab-importar" class="hidden">
+    <div class="card">
+      <div class="card-title">Opción 1 — Plantilla Excel (recomendado)</div>
+      <div class="plantilla-box">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#085041">📋 Update_Conciliacion_PLANTILLA.xlsx</div>
+          <div style="font-size:12px;color:#0F6E56;margin-top:4px">
+            Llena la hoja ID con IDs y campos a actualizar → clic en Aplicar
+          </div>
+          <div style="font-size:12px;font-weight:600;margin-top:6px" id="plantilla-estado"></div>
+        </div>
+        <button class="btn btn-primary" onclick="aplicarPlantilla()">⚡ Aplicar plantilla</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Opción 2 — Subir CSV manualmente</div>
+      <div class="import-zone" onclick="document.getElementById('file-csv').click()">
+        📂 Haz clic para seleccionar tu CSV<br>
+        <small style="font-size:11px">Columnas: ID + cualquier campo editable</small>
+      </div>
+      <input type="file" id="file-csv" accept=".csv" class="hidden" onchange="cargarCSV(event)"/>
+    </div>
+    <div id="panel-importar" class="hidden">
+      <div class="card">
+        <div class="card-title" id="import-titulo">Vista previa</div>
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Estado nuevo</th><th>Detalle nuevo</th><th>Estado</th></tr></thead>
+          <tbody id="import-preview"></tbody>
+        </table>
+        <div class="btn-row">
+          <button class="btn" onclick="cancelarImport()">✖ Cerrar</button>
+          <button class="btn btn-primary" id="btn-aplicar-csv" onclick="aplicarCSV()">✅ Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 3 — LOG OPERACIONAL
+  ════════════════════════════════════ -->
+  <div id="tab-logop" class="hidden">
+
+    <!-- Tablero de avance — para Karen -->
+    <div class="tablero" id="tablero-avance">
+      <div class="tablero-title">🎯 Tablero de Avance — Pendiente Enviar a Cobranzas</div>
+
+      <div class="tablero-kpis">
+        <div class="tablero-kpi">
+          <div class="tablero-kpi-label">Meta (total en base)</div>
+          <div class="tablero-kpi-val" id="tab-meta-casos">—</div>
+          <div class="tablero-kpi-sub" id="tab-meta-monto">—</div>
+        </div>
+        <div class="tablero-kpi">
+          <div class="tablero-kpi-label">✅ Logrado hoy</div>
+          <div class="tablero-kpi-val" id="tab-log-casos">—</div>
+          <div class="tablero-kpi-sub" id="tab-log-monto">—</div>
+        </div>
+        <div class="tablero-kpi">
+          <div class="tablero-kpi-label">📈 Avance casos</div>
+          <div class="tablero-kpi-val" id="tab-pct-casos">—</div>
+          <div class="tablero-kpi-sub">de los casos en estado ganador</div>
+        </div>
+        <div class="tablero-kpi">
+          <div class="tablero-kpi-label">💰 Avance monto</div>
+          <div class="tablero-kpi-val" id="tab-pct-monto">—</div>
+          <div class="tablero-kpi-sub" id="tab-pct-semanal">vs meta semanal</div>
+        </div>
+      </div>
+
+      <!-- Barra de progreso: casos -->
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span>Casos procesados hoy</span>
+          <span id="tab-bar-casos-lbl">0 / 0</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill casos" id="tab-bar-casos" style="width:0%">
+            <span class="prog-pct" id="tab-bar-casos-pct">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de progreso: monto -->
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span>Monto procesado hoy</span>
+          <span id="tab-bar-monto-lbl">$ 0 / $ 0</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill monto" id="tab-bar-monto" style="width:0%">
+            <span class="prog-pct" id="tab-bar-monto-pct">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de progreso: meta semanal -->
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span>Avance vs meta semanal ($250,000)</span>
+          <span id="tab-bar-sem-lbl">0%</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill semanal" id="tab-bar-sem" style="width:0%">
+            <span class="prog-pct" id="tab-bar-sem-pct">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controles del log -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">Log Operacional — 1 fila por ID por día</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="exportarLog()">⬇ CSV</button>
+          <button class="btn btn-primary" onclick="cargarLog()">🔄 Actualizar</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#888;margin-top:6px" id="log-info">—</div>
+    </div>
+
+    <div class="filtros-row">
+      <input class="filtro-input" type="date" id="log-fecha" onchange="cargarLog()"/>
+      <input class="filtro-input" type="text" id="log-f-base"   placeholder="Filtrar base..."         oninput="filtrarLog()"/>
+      <input class="filtro-input" type="text" id="log-f-estado" placeholder="Filtrar estado final..."  oninput="filtrarLog()"/>
+      <span style="font-size:12px;color:#888" id="log-count"></span>
+    </div>
+
+    <!-- Tabla log -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="log-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Base</th><th>Monto</th><th>Año</th>
+              <th>Estado Origen</th><th>Detalle Origen</th>
+              <th>Estado Final</th><th>Detalle Final</th>
+              <th>Q cambios</th><th>1ª mod</th><th>Última mod</th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Desgloses analíticos -->
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Por Base</div>
+        <table class="data-table">
+          <thead><tr><th>Base</th><th>Casos</th><th>Monto</th></tr></thead>
+          <tbody id="log-por-base"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Por Estado Final</div>
+        <table class="data-table">
+          <thead><tr><th>Estado</th><th>Casos</th><th>Monto</th></tr></thead>
+          <tbody id="log-por-estado"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔀 Matriz de Transiciones — Estado Origen → Estado Final</div>
+      <div style="font-size:12px;color:#888;margin-bottom:10px">
+        De dónde venían los registros y a dónde llegaron hoy
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Origen</th><th></th><th>Destino</th><th>Casos</th><th>Monto</th><th style="width:120px">%</th></tr>
+        </thead>
+        <tbody id="log-matriz"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 4 — DASHBOARD BASE GENERAL
+  ════════════════════════════════════ -->
+  <div id="tab-dashboard" class="hidden">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-title" style="margin:0">Dashboard — Estado actual Base General (RAM)</div>
+        <button class="btn btn-primary" onclick="cargarDashboard()">🔄 Actualizar</button>
+      </div>
+      <div style="font-size:12px;color:#888;margin-top:6px" id="dash-info">—</div>
+    </div>
+
+    <!-- KPI Principal -->
+    <div class="kpi-card principal" style="margin-bottom:14px">
+      <div class="kpi-label">🔴 KPI Principal — Backlog: Pendiente Enviar a Cobranzas</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:10px">
+        <div><div style="font-size:11px;color:#0a5a47">Monto</div><div class="kpi-val green" id="dash-bl-monto">—</div></div>
+        <div><div style="font-size:11px;color:#0a5a47">Casos</div><div class="kpi-val green" id="dash-bl-casos">—</div></div>
+        <div><div style="font-size:11px;color:#0a5a47">% del total</div><div class="kpi-val" id="dash-bl-pct">—</div></div>
+        <div><div style="font-size:11px;color:#0a5a47">Semáforo</div><div class="kpi-val" id="dash-semaforo">—</div></div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">✅ Conciliado Contablemente</div><div class="kpi-val" id="d-conc-m">—</div><div class="kpi-sub" id="d-conc-c">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">📤 Enviado A Cobranzas</div><div class="kpi-val" id="d-cobr-m">—</div><div class="kpi-sub" id="d-cobr-c">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">↩️ Extorno Global</div><div class="kpi-val" id="d-ext-m">—</div><div class="kpi-sub" id="d-ext-c">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">🔍 Por Analizar</div><div class="kpi-val amber" id="d-anal-m">—</div><div class="kpi-sub" id="d-anal-c">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">📬 Pendiente Envío Base</div><div class="kpi-val" id="d-pend-m">—</div><div class="kpi-sub" id="d-pend-c">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">📋 Total Registros</div><div class="kpi-val" id="d-tot-m">—</div><div class="kpi-sub" id="d-tot-c">—</div></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Por Base</div>
+        <table class="data-table">
+          <thead><tr><th>Base</th><th>Casos</th><th>Monto</th><th>%</th></tr></thead>
+          <tbody id="dash-base"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Por Estado de Avance</div>
+        <table class="data-table">
+          <thead><tr><th>Estado</th><th>Casos</th><th>Monto</th></tr></thead>
+          <tbody id="dash-estado"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-title">Top 10 — Detalle de los Casos</div>
+      <table class="data-table">
+        <thead><tr><th>Detalle</th><th>Casos</th><th>Monto</th><th style="width:140px">Barra</th></tr></thead>
+        <tbody id="dash-detalle"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 5 — MOVIMIENTO DEL DÍA
+  ════════════════════════════════════ -->
+  <div id="tab-movimiento" class="hidden">
+
+    <!-- Header -->
+    <div class="card">
+      <div class="mov-header">
+        <div>
+          <div class="card-title" style="margin:0">🔀 Movimiento del día — Snapshot vs Estado actual</div>
+          <div style="font-size:12px;color:#888;margin-top:4px" id="mov-info">—</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="snap-estado"></div>
+          <button class="btn" onclick="exportarMovimiento()">⬇ CSV</button>
+          <button class="btn btn-primary" onclick="cargarMovimiento()">🔄 Actualizar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs del movimiento -->
+    <div class="mov-kpis">
+      <div class="mov-kpi">
+        <div class="mov-kpi-label">Total combinaciones</div>
+        <div class="mov-kpi-val" id="mov-total">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">estado × detalle</div>
+      </div>
+      <div class="mov-kpi" style="border-color:#0F6E56">
+        <div class="mov-kpi-label">Con movimiento</div>
+        <div class="mov-kpi-val" style="color:#0F6E56" id="mov-con">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">cambiaron hoy</div>
+      </div>
+      <div class="mov-kpi">
+        <div class="mov-kpi-label">Sin movimiento</div>
+        <div class="mov-kpi-val" style="color:#888" id="mov-sin">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">igual al inicio</div>
+      </div>
+      <div class="mov-kpi" style="border-color:#0F6E56">
+        <div class="mov-kpi-label">🎯 Delta Pend. Cobranza</div>
+        <div class="mov-kpi-val" style="color:#0F6E56" id="mov-delta-cobr">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px" id="mov-delta-cobr-m">—</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-mov">
+      <input class="filtro-input" type="text" id="mov-f-estado"
+        placeholder="Filtrar estado..." oninput="filtrarMovimiento()"/>
+      <input class="filtro-input" type="text" id="mov-f-detalle"
+        placeholder="Filtrar detalle..." oninput="filtrarMovimiento()"/>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="mov-solo-cambios" onchange="filtrarMovimiento()" checked/>
+        Solo con movimiento
+      </label>
+      <span style="font-size:12px;color:#888" id="mov-count"></span>
+    </div>
+
+    <!-- Tabla principal de movimiento -->
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table class="mov-table" id="mov-tabla">
+          <thead>
+            <tr>
+              <th>Estado Avance</th>
+              <th>Detalle de los Casos</th>
+              <th style="text-align:right">Q Inicio</th>
+              <th style="text-align:right">Q Actual</th>
+              <th style="text-align:right">Δ Casos</th>
+              <th style="text-align:right">Monto Inicio</th>
+              <th style="text-align:right">Monto Actual</th>
+              <th style="text-align:right">Δ Monto</th>
+            </tr>
+          </thead>
+          <tbody id="mov-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Snapshot inicial del día -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-title">📸 Snapshot inicial del día — estado al arrancar el servidor</div>
+      <div style="font-size:12px;color:#888;margin-bottom:10px" id="snap-info">—</div>
+      <div style="overflow-x:auto">
+        <table class="mov-table">
+          <thead>
+            <tr>
+              <th>Estado Avance</th>
+              <th>Detalle de los Casos</th>
+              <th style="text-align:right">Q Casos</th>
+              <th style="text-align:right">Monto Dolar</th>
+              <th>Hora snapshot</th>
+            </tr>
+          </thead>
+          <tbody id="snap-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /content -->
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ESTADO LOCAL
+// ════════════════════════════════════════════════════════════
+let registroActual = null;   // registro buscado en RAM
+let opcionesCombo  = {};     // valores únicos para combos
+let logData        = [];     // log del día en memoria (para filtrar)
+let guardadosHoy   = 0;
+
+// ════════════════════════════════════════════════════════════
+// UTILIDADES
+// ════════════════════════════════════════════════════════════
+
+/** Muestra un toast de notificación */
+function toast(msg, tipo = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `show ${tipo}`;
+  setTimeout(() => t.className = '', 3500);
+}
+
+/** Formatea número con separador de miles */
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toLocaleString('es-PE');
+}
+
+/** Formatea como USD con 2 decimales */
+function fmtUSD(n) {
+  if (n === null || n === undefined) return '—';
+  return `$ ${Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+
+/** Establece el texto de un elemento por ID de forma segura */
+function setEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+/** Badge de estado con color según el valor */
+function estBadge(e) {
+  if (!e || e === '—') return '<span class="badge b-gray">—</span>';
+  const u = (e||'').toUpperCase();
+  const c = u.includes('FINALIZADO') ? 'b-ok'
+          : u.includes('ANALIZ')     ? 'b-warn'
+          : u.includes('ENVIAD')     ? 'b-info'
+          : 'b-gray';
+  return `<span class="badge ${c}">${e}</span>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// NAVEGACIÓN ENTRE TABS
+// ════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  ['registro','importar','logop','dashboard','movimiento'].forEach((t, i) => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t === tab);
+  });
+  if (tab === 'logop')      cargarLog();
+  if (tab === 'dashboard')  cargarDashboard();
+  if (tab === 'movimiento') cargarMovimiento();
+}
+
+// ════════════════════════════════════════════════════════════
+// ESTADO DEL SERVIDOR
+// ════════════════════════════════════════════════════════════
+
+/** GET /api/estado — info general de la base cargada */
+async function cargarEstado() {
+  try {
+    const r = await fetch('/api/estado');
+    const d = await r.json();
+    setEl('m-total',    fmt(d.total_registros));
+    setEl('m-carga',    d.cargado_en);
+    setEl('m-archivo',  d.archivo);
+    setEl('info-archivo', d.archivo);
+    setEl('info-filas', `${fmt(d.total_registros)} filas`);
+  } catch(e) { console.error('cargarEstado:', e); }
+}
+
+/** GET /api/opciones — valores únicos para combos */
+async function cargarOpciones() {
+  try {
+    const r = await fetch('/api/opciones');
+    opcionesCombo = await r.json();
+  } catch(e) { console.error('cargarOpciones:', e); }
+}
+
+/** POST /api/recargar — fuerza recarga del Excel desde disco */
+async function recargarBase() {
+  toast('Recargando base...', 'ok');
+  await fetch('/api/recargar', {method:'POST'});
+  await cargarEstado();
+  document.getElementById('banner-sync').classList.remove('visible');
+  toast('Base recargada ✅', 'ok');
+}
+
+/** GET /api/check-sync — detecta cambios externos en el Excel */
+async function checkSync() {
+  try {
+    const r = await fetch('/api/check-sync');
+    const d = await r.json();
+    const b = document.getElementById('banner-sync');
+    if (d.desincronizado) {
+      setEl('banner-det', `Modificado: ${d.modificado_en} | RAM desde: ${d.cargado_en}`);
+      b.classList.add('visible');
+    } else {
+      b.classList.remove('visible');
+    }
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════
+// COMBOS INTELIGENTES
+// ════════════════════════════════════════════════════════════
+const CAMPOS_COMBO = ['DETALLE DE LOS CASOS','ESTADO DE AVANCE'];
+
+function crearCombo(col, val) {
+  const id  = `combo_${col.replace(/[\s\-\/°]/g,'_')}`;
+  const ops = opcionesCombo[col] || [];
+  return `<div class="combo-wrap">
+    <input class="combo-input" id="${id}" data-col="${col}" value="${val||''}"
+      placeholder="Escribe para filtrar..."
+      oninput="filtrarCombo('${id}')"
+      onfocus="abrirCombo('${id}')"
+      onblur="cerrarComboDelay('${id}')"
+      autocomplete="off"/>
+    <div class="combo-drop" id="drop_${id}">
+      ${ops.map(o=>`<div class="combo-opt" onmousedown="selCombo('${id}','${o.replace(/'/g,"\\'")}')">${o}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function filtrarCombo(id) {
+  const el  = document.getElementById(id);
+  const txt = (el.value||'').toLowerCase();
+  const col = el.dataset.col;
+  const ops = (opcionesCombo[col]||[]).filter(o=>o.toLowerCase().includes(txt));
+  const drop= document.getElementById(`drop_${id}`);
+  drop.innerHTML = ops.map(o=>`<div class="combo-opt" onmousedown="selCombo('${id}','${o.replace(/'/g,"\\'")}')">${o}</div>`).join('');
+  drop.classList.add('open');
+}
+
+function abrirCombo(id) { filtrarCombo(id); }
+
+function cerrarComboDelay(id) {
+  setTimeout(()=>{ document.getElementById(`drop_${id}`)?.classList.remove('open'); }, 200);
+}
+
+function selCombo(id, val) {
+  document.getElementById(id).value = val;
+  document.getElementById(`drop_${id}`).classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════════════
+// REGISTRO INDIVIDUAL
+// ════════════════════════════════════════════════════════════
+
+/** GET /api/buscar/{id} — busca un registro en RAM */
+async function buscarRegistro() {
+  const id = (document.getElementById('input-id').value||'').trim();
+  if (!id) { toast('Ingresa un ID','err'); return; }
+  try {
+    const r = await fetch(`/api/buscar/${encodeURIComponent(id)}`);
+    if (!r.ok) { toast(`ID ${id} no encontrado`,'err'); return; }
+    const d = await r.json();
+    registroActual = {id, readonly: d.readonly, editables: d.editables};
+    renderRegistro(d);
+    // Oculta historial anterior
+    document.getElementById('panel-historial').classList.add('hidden');
+  } catch(e) { toast('Error al buscar','err'); }
+}
+
+function renderRegistro(d) {
+  setEl('header-id', registroActual.id);
+  document.getElementById('badge-base').textContent   = d.readonly?.BASE || '—';
+  document.getElementById('badge-estado').textContent = d.editables?.['ESTADO DE AVANCE'] || '—';
+
+  // ── Campos readonly ──
+  const prioRO = ['BASE','FUENTE','CUENTA','MONEDA','AÑO','FECHA OPERACION',
+                  'MONTO','MONTO DOLARIZADO','SISTEMA','CERTIFICADO BANCO',
+                  'IDEPOL','CONCAT-POLIZA','N° DE OPERACIÓN'];
+  const contRO = document.getElementById('campos-readonly');
+  contRO.innerHTML = '';
+  prioRO.forEach(col => {
+    if (d.readonly[col] !== undefined)
+      contRO.innerHTML += `<div class="field"><label>${col}</label>
+        <div class="field-val">${d.readonly[col]||'—'}</div></div>`;
+  });
+
+  // ── Campos editables ──
+  const contE    = document.getElementById('campos-editables');
+  const estrella = ['DETALLE DE LOS CASOS','ESTADO DE AVANCE'];
+  let html       = '<div class="fields-grid-2" style="margin-bottom:12px">';
+
+  estrella.forEach(col => {
+    if (d.editables[col] !== undefined)
+      html += `<div class="field"><label>⭐ ${col}</label>
+        ${crearCombo(col, d.editables[col]||'')}</div>`;
+  });
+  html += '</div><div class="fields-grid">';
+
+  Object.keys(d.editables).filter(k=>!estrella.includes(k)).forEach(col => {
+    html += `<div class="field"><label>${col}</label>
+      <input class="field-edit" type="text" id="edit_${col.replace(/[\s\-\/°]/g,'_')}"
+        value="${d.editables[col]||''}"/></div>`;
+  });
+  html += '</div>';
+  contE.innerHTML = html;
+  document.getElementById('panel-registro').classList.remove('hidden');
+}
+
+function limpiarFormulario() {
+  registroActual = null;
+  document.getElementById('input-id').value = '';
+  document.getElementById('panel-registro').classList.add('hidden');
+  document.getElementById('panel-historial').classList.add('hidden');
+}
+
+/** POST /api/guardar — guarda cambios del registro actual */
+async function guardarCambios() {
+  if (!registroActual) return;
+  const cambios = {};
+
+  Object.keys(registroActual.editables).forEach(col => {
+    let val = '';
+    if (CAMPOS_COMBO.includes(col)) {
+      const el = document.getElementById(`combo_${col.replace(/[\s\-\/°]/g,'_')}`);
+      val = el ? el.value.trim() : '';
+    } else {
+      const el = document.getElementById(`edit_${col.replace(/[\s\-\/°]/g,'_')}`);
+      val = el ? el.value.trim() : '';
+    }
+    // Solo incluye si cambió
+    if (val !== (registroActual.editables[col]||'')) cambios[col] = val;
+  });
+
+  if (!Object.keys(cambios).length) { toast('Sin cambios para guardar','ok'); return; }
+
+  try {
+    const r = await fetch('/api/guardar', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({id_registro: registroActual.id, cambios}),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.detail||'Error al guardar','err'); return; }
+    toast(`✅ ID ${registroActual.id} guardado`,'ok');
+    guardadosHoy++;
+    setEl('m-guardados', guardadosHoy);
+    Object.assign(registroActual.editables, cambios);
+  } catch(e) { toast('Error de conexión','err'); }
+}
+
+/** GET /api/log/historial/{id} — muestra el historial completo del ID */
+async function verHistorial() {
+  if (!registroActual) return;
+  const id = registroActual.id;
+  try {
+    const r = await fetch(`/api/log/historial/${encodeURIComponent(id)}`);
+    const d = await r.json();
+    const panel  = document.getElementById('panel-historial');
+    const titulo = document.getElementById('hist-titulo');
+    const cont   = document.getElementById('hist-contenido');
+
+    titulo.textContent = `Historial del ID ${id} — ${d.total_cambios} cambios registrados`;
+
+    if (!d.total_cambios) {
+      cont.innerHTML = '<div style="color:#888;padding:12px">Sin cambios registrados para este ID</div>';
+    } else {
+      cont.innerHTML = d.historial.map(h => `
+        <div class="hist-row">
+          <span class="hist-ts">${h.timestamp}</span>
+          <span class="hist-campo">${h.campo}</span>
+          <span>${estBadge(h.valor_antes||'—')}</span>
+          <span class="hist-arrow">→</span>
+          <span>${estBadge(h.valor_nuevo||'—')}</span>
+          <span style="margin-left:auto;font-size:11px;color:#888">${h.base||''}</span>
+        </div>`).join('');
+    }
+    panel.classList.remove('hidden');
+  } catch(e) { toast('Error al cargar historial','err'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// IMPORTAR
+// ════════════════════════════════════════════════════════════
+
+/** POST /api/importar-plantilla — aplica la plantilla Excel */
+async function aplicarPlantilla() {
+  const el = document.getElementById('plantilla-estado');
+  el.style.color = '#0F6E56';
+  el.textContent = '⏳ Procesando...';
+  try {
+    const r = await fetch('/api/importar-plantilla', {method:'POST'});
+    const d = await r.json();
+    if (!r.ok) { el.textContent = `❌ ${d.detail}`; el.style.color='#E24B4A'; return; }
+    el.textContent = `✅ ${d.ok} actualizados | ${d.no_cruza?.length||0} no cruzaron | Total: ${d.total}`;
+    guardadosHoy += d.ok;
+    setEl('m-guardados', guardadosHoy);
+    toast(`✅ ${d.ok} registros actualizados`, 'ok');
+  } catch(e) {
+    el.textContent = '❌ Error de conexión';
+    el.style.color = '#E24B4A';
+  }
+}
+
+let datosCSV = [];
+
+function cargarCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lineas  = e.target.result.split('\n').filter(l=>l.trim());
+    const headers = lineas[0].split(',').map(h=>h.trim().replace(/"/g,''));
+    datosCSV      = [];
+    for (let i=1; i<lineas.length; i++) {
+      const vals = lineas[i].split(',').map(v=>v.trim().replace(/"/g,''));
+      const obj  = {};
+      headers.forEach((h,idx)=>{ obj[h] = vals[idx]||''; });
+      if (obj['ID']) datosCSV.push(obj);
+    }
+    const tbody = document.getElementById('import-preview');
+    tbody.innerHTML = datosCSV.map(row=>`<tr>
+      <td><strong>${row['ID']}</strong></td>
+      <td>${row['ESTADO DE AVANCE']||'—'}</td>
+      <td>${row['DETALLE DE LOS CASOS']||'—'}</td>
+      <td><span class="badge b-warn">Pendiente</span></td>
+    </tr>`).join('');
+    setEl('import-titulo', `Vista previa — ${datosCSV.length} registros`);
+    setEl('btn-aplicar-csv', `✅ Aplicar ${datosCSV.length} registros`);
+    document.getElementById('panel-importar').classList.remove('hidden');
+  };
+  reader.readAsText(file,'UTF-8');
+  event.target.value = '';
+}
+
+function cancelarImport() {
+  datosCSV = [];
+  document.getElementById('panel-importar').classList.add('hidden');
+}
+
+/** POST /api/importar — aplica registros del CSV */
+async function aplicarCSV() {
+  if (!datosCSV.length) return;
+  try {
+    const r = await fetch('/api/importar', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({registros: datosCSV}),
+    });
+    const d = await r.json();
+    toast(`✅ ${d.ok} actualizados | ${d.no_cruza?.length||0} no cruzaron`, 'ok');
+    guardadosHoy += d.ok;
+    setEl('m-guardados', guardadosHoy);
+  } catch(e) { toast('Error al importar','err'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// LOG OPERACIONAL
+// ════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/log?fecha=YYYY-MM-DD  — registros del día
+ * GET /api/log/resumen?fecha=... — resumen + KPIs de avance
+ *
+ * NOTA: ambos son GET porque solo LEEN datos.
+ * Los parámetros van en la URL (?fecha=...), no en el body.
+ */
+async function cargarLog() {
+  const fechaEl = document.getElementById('log-fecha');
+  const fecha   = fechaEl.value || new Date().toISOString().slice(0,10);
+  if (!fechaEl.value) fechaEl.value = fecha;
+
+  try {
+    // Carga en paralelo: registros + resumen analítico
+    const [rLog, rRes] = await Promise.all([
+      fetch(`/api/log?fecha=${fecha}&limite=2`),
+      fetch(`/api/log/resumen?fecha=${fecha}`),
+    ]);
+
+    if (!rLog.ok || !rRes.ok) { toast('Error al cargar log','err'); return; }
+
+    const log = await rLog.json();
+    const res = await rRes.json();
+
+    setEl('log-info', `Fecha: ${log.fecha} | ${log.total_casos} IDs únicos | Monto total: ${fmtUSD(log.total_monto)}`);
+
+    // ── Tablero de avance (Karen) ──────────────────────────────────────────
+    const av = res.avance || {};
+
+    setEl('tab-meta-casos', fmt(av.meta_casos));
+    setEl('tab-meta-monto', fmtUSD(av.meta_monto));
+    setEl('tab-log-casos',  fmt(av.logrado_casos));
+    setEl('tab-log-monto',  fmtUSD(av.logrado_monto));
+    setEl('tab-pct-casos',  `${av.pct_casos||0}%`);
+    setEl('tab-pct-monto',  `${av.pct_monto||0}%`);
+    setEl('tab-pct-semanal',`${av.pct_meta_semanal||0}% de meta semanal $250k`);
+
+    // Barra de progreso: casos
+    const pctC = Math.min(100, av.pct_casos||0);
+    document.getElementById('tab-bar-casos').style.width = `${pctC}%`;
+    setEl('tab-bar-casos-pct', `${pctC}%`);
+    setEl('tab-bar-casos-lbl', `${fmt(av.logrado_casos)} / ${fmt(av.meta_casos)} casos`);
+
+    // Barra de progreso: monto
+    const pctM = Math.min(100, av.pct_monto||0);
+    document.getElementById('tab-bar-monto').style.width = `${pctM}%`;
+    setEl('tab-bar-monto-pct', `${pctM}%`);
+    setEl('tab-bar-monto-lbl', `${fmtUSD(av.logrado_monto)} / ${fmtUSD(av.meta_monto)}`);
+
+    // Barra de progreso: meta semanal
+    const pctS = Math.min(100, av.pct_meta_semanal||0);
+    document.getElementById('tab-bar-sem').style.width = `${pctS}%`;
+    setEl('tab-bar-sem-pct', `${pctS}%`);
+    setEl('tab-bar-sem-lbl', `${pctS}% completado`);
+
+    // ── Tabla principal de registros ───────────────────────────────────────
+    logData = log.registros || [];
+    renderLog(logData);
+
+    // ── Por base ───────────────────────────────────────────────────────────
+    document.getElementById('log-por-base').innerHTML =
+      (res.por_base||[]).map(r=>`<tr>
+        <td><strong>${r.base||'—'}</strong></td>
+        <td>${fmt(r.casos)}</td>
+        <td>${fmtUSD(r.monto)}</td>
+      </tr>`).join('') ||
+      '<tr><td colspan="3" style="text-align:center;color:#888;padding:12px">Sin datos</td></tr>';
+
+    // ── Por estado final ───────────────────────────────────────────────────
+    document.getElementById('log-por-estado').innerHTML =
+      (res.por_estado_final||[]).map(r=>`<tr>
+        <td>${estBadge(r.estado)}</td>
+        <td>${fmt(r.casos)}</td>
+        <td>${fmtUSD(r.monto)}</td>
+      </tr>`).join('') ||
+      '<tr><td colspan="3" style="text-align:center;color:#888;padding:12px">Sin datos</td></tr>';
+
+    // ── Matriz de transiciones ─────────────────────────────────────────────
+    const maxC   = (res.matriz_transiciones||[])[0]?.casos || 1;
+    document.getElementById('log-matriz').innerHTML =
+      (res.matriz_transiciones||[]).map(r=>{
+        const pct   = Math.round((r.casos/maxC)*100);
+        const esGan = (r.destino||'').toUpperCase().includes('FINALIZADO');
+        return `<tr style="${esGan?'background:#f0fbf7':''}">
+          <td>${estBadge(r.origen)}</td>
+          <td style="text-align:center;color:#0F6E56;font-weight:700;font-size:16px">→</td>
+          <td>${estBadge(r.destino)}</td>
+          <td style="text-align:center;font-weight:700">${fmt(r.casos)}</td>
+          <td style="font-weight:600">${fmtUSD(r.monto)}</td>
+          <td>
+            <div class="bar-row">
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${pct}%;background:${esGan?'#0F6E56':'#aaa'}"></div>
+              </div>
+              <span style="font-size:10px;color:#888;min-width:28px">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('') ||
+      '<tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Sin transiciones registradas</td></tr>';
+
+  } catch(e) { toast('Error al cargar log: '+e,'err'); }
+}
+
+/** Renderiza la tabla principal del log con los datos en memoria */
+function renderLog(datos) {
+  const tbody = document.getElementById('log-tbody');
+  setEl('log-count', `${datos.length} registros`);
+
+  if (!datos.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:24px">Sin registros para esta fecha</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = datos.map(r => {
+    const esGan = (r.estado_final||'').toUpperCase() === 'FINALIZADO'
+               && (r.detalle_final||'').toUpperCase() === 'PENDIENTE ENVIAR A COBRANZAS';
+    return `<tr class="${esGan?'ganador':''}">
+      <td><strong>${r.id}</strong></td>
+      <td><span class="badge b-info" style="font-size:10px">${r.base||'—'}</span></td>
+      <td style="text-align:right;font-weight:${esGan?700:400};color:${esGan?'#0F6E56':'#333'}">
+        ${fmtUSD(r.monto_dolar)}
+      </td>
+      <td>${r.anio||'—'}</td>
+      <td>${estBadge(r.estado_origen)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis" title="${r.detalle_origen||''}">
+        ${(r.detalle_origen||'—').substring(0,28)}
+      </td>
+      <td>${estBadge(r.estado_final)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis" title="${r.detalle_final||''}">
+        ${(r.detalle_final||'—').substring(0,28)}${esGan?' 🎯':''}
+      </td>
+      <td style="text-align:center"><span class="badge b-info">${r.q_cambios}</span></td>
+      <td style="color:#888">${(r.primera_mod||'').slice(11,19)||'—'}</td>
+      <td style="color:#888">${(r.ultima_mod||'').slice(11,19)||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/** Filtra la tabla del log en cliente (sin llamar al servidor) */
+function filtrarLog() {
+  const base   = (document.getElementById('log-f-base').value||'').toLowerCase();
+  const estado = (document.getElementById('log-f-estado').value||'').toLowerCase();
+  renderLog(logData.filter(r =>
+    (!base   || (r.base||'').toLowerCase().includes(base)) &&
+    (!estado || (r.estado_final||'').toLowerCase().includes(estado))
+  ));
+}
+
+/** Exporta el log actual a CSV */
+function exportarLog() {
+  if (!logData.length) { toast('Sin datos para exportar','err'); return; }
+  const cols   = ['id','base','monto_dolar','anio','estado_origen','detalle_origen','estado_final','detalle_final','q_cambios','primera_mod','ultima_mod'];
+  const header = cols.join(',');
+  const rows   = logData.map(r => cols.map(c => `"${r[c]??''}"`).join(','));
+  const blob   = new Blob([[header,...rows].join('\n')], {type:'text/csv;charset=utf-8;'});
+  const fecha  = document.getElementById('log-fecha').value || 'hoy';
+  const a      = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(blob),
+    download: `log_operacional_${fecha}.csv`,
+  });
+  a.click();
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD — BASE GENERAL EN RAM
+// ════════════════════════════════════════════════════════════
+
+/** GET /api/dashboard — KPIs de la base general */
+async function cargarDashboard() {
+  try {
+    const r = await fetch('/api/dashboard');
+    if (!r.ok) { toast('Error al cargar dashboard','err'); return; }
+    const d = await r.json();
+
+    setEl('dash-info', `Última carga: ${d.resumen?.cargado_en} | ${fmt(d.resumen?.total_registros)} registros`);
+
+    // ── KPI Principal: Backlog ──
+    const bl = d.kpis?.backlog;
+    if (bl) {
+      setEl('dash-bl-casos', fmt(bl.casos));
+      setEl('dash-bl-monto', fmtUSD(bl.monto));
+      setEl('dash-bl-pct',   `${bl.pct||0}%`);
+      const semMap = {verde:'🟢 Normal', amarillo:'🟡 Atención', rojo:'🔴 Crítico'};
+      setEl('dash-semaforo', semMap[bl.semaforo]||'—');
+    }
+
+    // ── KPIs secundarios ──
+    [
+      ['d-conc', d.kpis?.conciliados],
+      ['d-cobr', d.kpis?.cobranza],
+      ['d-ext',  d.kpis?.extornos],
+      ['d-anal', d.kpis?.por_analizar],
+      ['d-pend', d.kpis?.pendiente_base],
+    ].forEach(([pfx, kpi]) => {
+      // monto en kpi-val (grande), casos en kpi-sub (pequeño)
+      setEl(`${pfx}-m`, kpi ? fmtUSD(kpi.monto) : '—');
+      setEl(`${pfx}-c`, kpi ? `${fmt(kpi.casos)} casos` : '—');
+    });
+    setEl('d-tot-m', fmtUSD(d.resumen?.monto_total));
+    setEl('d-tot-c', `${fmt(d.resumen?.total_registros)} registros`);
+
+    // ── Por base ──
+    const total = d.resumen?.total_registros || 1;
+    document.getElementById('dash-base').innerHTML =
+      Object.entries(d.distribucion?.por_base||{})
+        .sort((a,b)=>b[1].casos-a[1].casos)
+        .map(([base,v])=>{
+          const pct = Math.round(v.casos/total*100);
+          return `<tr>
+            <td><strong>${base}</strong></td>
+            <td>${fmt(v.casos)}</td>
+            <td>${fmtUSD(v.monto)}</td>
+            <td>
+              <div class="bar-row">
+                <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+                <span style="font-size:11px;color:#888">${pct}%</span>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+    // ── Por estado ──
+    document.getElementById('dash-estado').innerHTML =
+      (d.distribucion?.por_estado||[]).map(v=>`<tr>
+        <td>${v.estado||'—'}</td>
+        <td>${fmt(v.casos)}</td>
+        <td>${fmtUSD(v.monto)}</td>
+      </tr>`).join('');
+
+    // ── Top detalles ──
+    const maxC = (d.distribucion?.por_detalle||[])[0]?.casos || 1;
+    document.getElementById('dash-detalle').innerHTML =
+      (d.distribucion?.por_detalle||[]).map(v=>{
+        const pct = Math.round(v.casos/maxC*100);
+        return `<tr>
+          <td>${v.detalle||'—'}</td>
+          <td>${fmt(v.casos)}</td>
+          <td>${fmtUSD(v.monto)}</td>
+          <td>
+            <div class="bar-row">
+              <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:11px;color:#888">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+  } catch(e) { toast('Error al cargar dashboard: '+e,'err'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// MOVIMIENTO DEL DÍA — snapshot vs estado actual
+// ════════════════════════════════════════════════════════════
+
+let movData  = [];  // datos del movimiento en memoria (para filtrar)
+let snapData = [];  // datos del snapshot en memoria
+
+/**
+ * GET /api/movimiento — delta entre snapshot y estado actual
+ * GET /api/snapshot   — foto inicial del día
+ *
+ * Ambos son GET porque solo LEEN — no modifican nada.
+ */
+async function cargarMovimiento() {
+  try {
+    // Carga en paralelo: movimiento + snapshot
+    const [rMov, rSnap] = await Promise.all([
+      fetch('/api/movimiento'),
+      fetch('/api/snapshot'),
+    ]);
+
+    if (!rMov.ok || !rSnap.ok) {
+      toast('Error al cargar movimiento', 'err');
+      return;
+    }
+
+    const mov  = await rMov.json();
+    const snap = await rSnap.json();
+
+    // ── Info header ──
+    const snapEl = document.getElementById('snap-estado');
+    if (mov.snapshot_existe) {
+      snapEl.innerHTML = '<span class="snap-badge snap-ok">📸 Snapshot disponible</span>';
+    } else {
+      snapEl.innerHTML = '<span class="snap-badge snap-no">⚠️ Sin snapshot — reinicia el servidor</span>';
+    }
+
+    setEl('mov-info',
+      `Fecha: ${mov.fecha} | ` +
+      `${mov.total_combinaciones} combinaciones | ` +
+      `${mov.con_movimiento} con movimiento`
+    );
+
+    // ── KPIs ──
+    setEl('mov-total', fmt(mov.total_combinaciones));
+    setEl('mov-con',   fmt(mov.con_movimiento));
+    setEl('mov-sin',   fmt(mov.sin_movimiento));
+
+    // Delta específico de Pendiente Enviar a Cobranzas
+    const cobr = (mov.movimientos || []).find(r =>
+      r.estado_avance.toUpperCase().includes('FINALIZADO') &&
+      r.detalle_casos.toUpperCase().includes('PENDIENTE ENVIAR A COBRANZAS')
+    );
+    if (cobr) {
+      const dq = cobr.delta_q;
+      const dm = cobr.delta_m;
+      const claseQ = dq > 0 ? 'delta-pos' : dq < 0 ? 'delta-neg' : 'delta-zero';
+      document.getElementById('mov-delta-cobr').innerHTML =
+        `<span class="${claseQ}">${dq > 0 ? '+' : ''}${fmt(dq)} casos</span>`;
+      document.getElementById('mov-delta-cobr-m').innerHTML =
+        `<span class="${claseQ}">${dm > 0 ? '+' : ''}${fmtUSD(dm)}</span>`;
+    } else {
+      setEl('mov-delta-cobr',   '—');
+      setEl('mov-delta-cobr-m', '—');
+    }
+
+    // ── Guarda en memoria para filtrar ──
+    movData  = mov.movimientos  || [];
+    snapData = snap.snapshot    || [];
+
+    // Render inicial con filtro "solo cambios" activo
+    filtrarMovimiento();
+
+    // ── Snapshot inicial ──
+    setEl('snap-info',
+      `Fecha: ${snap.fecha} | ${snap.total_filas} combinaciones | ` +
+      `${fmt(snap.total_casos)} casos | ${fmtUSD(snap.total_monto)}`
+    );
+
+    const snapTbody = document.getElementById('snap-tbody');
+    if (!snapData.length) {
+      snapTbody.innerHTML = `<tr><td colspan="5"
+        style="text-align:center;color:#888;padding:20px">
+        Sin snapshot para hoy — el servidor debe arrancar para generar uno
+      </td></tr>`;
+    } else {
+      snapTbody.innerHTML = snapData.map(r => `
+        <tr>
+          <td>${estBadge(r.estado_avance)}</td>
+          <td style="max-width:250px;word-break:break-word">${r.detalle_casos}</td>
+          <td style="text-align:right;font-weight:600">${fmt(r.q_casos)}</td>
+          <td style="text-align:right;font-weight:600">${fmtUSD(r.monto_dolar)}</td>
+          <td style="color:#888">${r.hora || '—'}</td>
+        </tr>`).join('');
+    }
+
+  } catch(e) {
+    toast('Error al cargar movimiento: ' + e, 'err');
+  }
+}
+
+/** Filtra la tabla de movimiento en cliente sin llamar al servidor */
+function filtrarMovimiento() {
+  const fEstado   = (document.getElementById('mov-f-estado')?.value   || '').toLowerCase();
+  const fDetalle  = (document.getElementById('mov-f-detalle')?.value  || '').toLowerCase();
+  const soloCamb  = document.getElementById('mov-solo-cambios')?.checked ?? true;
+
+  const filtrado = movData.filter(r => {
+    const matchEst = !fEstado  || r.estado_avance.toLowerCase().includes(fEstado);
+    const matchDet = !fDetalle || r.detalle_casos.toLowerCase().includes(fDetalle);
+    const matchMov = !soloCamb || r.hay_movimiento;
+    return matchEst && matchDet && matchMov;
+  });
+
+  renderMovimiento(filtrado);
+}
+
+/** Renderiza la tabla de movimiento */
+function renderMovimiento(datos) {
+  const tbody = document.getElementById('mov-tbody');
+  setEl('mov-count', `${datos.length} filas`);
+
+  if (!datos.length) {
+    tbody.innerHTML = `<tr><td colspan="8"
+      style="text-align:center;color:#888;padding:24px">
+      Sin datos — prueba quitando el filtro "Solo con movimiento"
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = datos.map(r => {
+    // Clase de fila: verde si creció, rojo si bajó, normal si igual
+    const clsFila = r.delta_q > 0 ? 'mov-up' : r.delta_q < 0 ? 'mov-down' : '';
+
+    // Delta casos: color y signo
+    const clsDQ  = r.delta_q > 0 ? 'delta-pos' : r.delta_q < 0 ? 'delta-neg' : 'delta-zero';
+    const sigDQ  = r.delta_q > 0 ? '+' : '';
+    const clsDM  = r.delta_m > 0 ? 'delta-pos' : r.delta_m < 0 ? 'delta-neg' : 'delta-zero';
+    const sigDM  = r.delta_m > 0 ? '+' : '';
+
+    // Resalta Pendiente Enviar a Cobranzas
+    const esCobr = r.estado_avance.toUpperCase().includes('FINALIZADO')
+                && r.detalle_casos.toUpperCase().includes('PENDIENTE ENVIAR A COBRANZAS');
+
+    return `<tr class="${clsFila}">
+      <td>${estBadge(r.estado_avance)}</td>
+      <td style="max-width:220px;word-break:break-word;font-size:12px">
+        ${r.detalle_casos}${esCobr ? ' 🎯' : ''}
+      </td>
+      <td style="text-align:right;color:#888">${fmt(r.q_inicio)}</td>
+      <td style="text-align:right;font-weight:600">${fmt(r.q_actual)}</td>
+      <td style="text-align:right">
+        <span class="${clsDQ}">${sigDQ}${fmt(r.delta_q)}</span>
+      </td>
+      <td style="text-align:right;color:#888">${fmtUSD(r.m_inicio)}</td>
+      <td style="text-align:right;font-weight:600">${fmtUSD(r.m_actual)}</td>
+      <td style="text-align:right">
+        <span class="${clsDM}">${sigDM}${fmtUSD(r.delta_m)}</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/** Exporta el movimiento a CSV */
+function exportarMovimiento() {
+  if (!movData.length) { toast('Sin datos para exportar', 'err'); return; }
+
+  const header = [
+    'Estado Avance', 'Detalle Casos',
+    'Q Inicio', 'Q Actual', 'Delta Q',
+    'Monto Inicio', 'Monto Actual', 'Delta Monto',
+    'Hay Movimiento'
+  ].join(',');
+
+  const rows = movData.map(r => [
+    `"${r.estado_avance}"`, `"${r.detalle_casos}"`,
+    r.q_inicio, r.q_actual, r.delta_q,
+    r.m_inicio, r.m_actual, r.delta_m,
+    r.hay_movimiento ? 'SI' : 'NO'
+  ].join(','));
+
+  const blob  = new Blob([[header, ...rows].join('\n')],
+    {type: 'text/csv;charset=utf-8;'});
+  const fecha = new Date().toISOString().slice(0, 10);
+  const a     = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(blob),
+    download: `movimiento_${fecha}.csv`,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ════════════════════════════════════════════════════════════
+cargarEstado();
+cargarOpciones();
+checkSync();
+setInterval(checkSync, 30000);  // verifica sincronización cada 30 seg
+</script>
+</body>
+</html>
